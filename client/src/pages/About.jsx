@@ -79,14 +79,14 @@ const About = () => {
             <FaCode className="text-4xl text-blue-600" />
             <h2 className="text-2xl font-bold">Developer's Note</h2>
             <p className="text-gray-600 max-w-2xl">
-              Hi! I’m <span className="font-semibold text-blue-600">Rahil</span>, the developer of this real-time auction platform.  
+              Hi! I’m <span className="font-semibold text-blue-600">Monis</span>, the developer of this real-time auction platform.  
               This project was built with <span className="font-semibold">MERN Stack</span> and 
               <span className="font-semibold"> Socket.io</span> to showcase my skills in building scalable, 
               real-time applications. You’re free to explore, test, and even contribute to it.  
               It’s currently a test project, but my aim is to make it a fully functional, production-ready platform.  
             </p>
             <p className="flex items-center gap-2 text-gray-500 text-sm">
-              Made with <FaHeart className="text-red-500" /> by Rahil
+              Made with <FaHeart className="text-red-500" /> by Monis
             </p>
           </div>
         </motion.div>
