@@ -22,7 +22,11 @@ const server = http.createServer(app);
 const io = setupSocket(server);
 
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: [
+        process.env.FRONTEND_URL || 'http://localhost:3000',
+        'https://bolibazaar.vercel.app',
+        'https://bolibazaar-git-main.vercel.app' // Preview deployments
+    ],
     credentials: true
 }));
 

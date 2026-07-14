@@ -5,7 +5,6 @@ import { fetchAuctionDetails } from '../services/operations/auctionAPI';
 import { placeBid, editBid, deleteBid } from '../services/operations/bidAPI';
 import CountdownTimer from '../components/CountdownTimer';
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
-import EmptyLoader from '../components/EmptyLoader';
 import BidModal from '../components/common/BidModal';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
