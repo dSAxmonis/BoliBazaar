@@ -1,6 +1,6 @@
 import { React, useState, useEffect } from "react";
 import { fetchNotifications, clearNotifications, readNotifications } from "../../../services/operations/auctionAPI";
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import { getSocket } from "../../../services/socketService";
 import NotificationBell from "./NotificationBell";
 import NotificationDropdown from "./NotificationDropdown";
@@ -33,13 +33,7 @@ const Notification = () => {
 
         const socket = getSocket();
         socket.on("bidNotification", (notification) => {
-            toast.info(notification.message, {
-                position: "top-right",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-            });
+            toast(notification.message, { duration: 3000 });
             getNotifications();
         });
 

@@ -91,25 +91,31 @@ exports.getUserProfile = async (req, res) => {
             });
         }
 
-        // Get user statistics
-        const totalAuctions = user.products.length;
-        const totalWinnings = user.winnings.length;
-        const totalBids = user.bids.length;
-        const watchListCount = user.watchList.length;
+        // Get user statistics (guarded - some accounts may be missing these
+        // fields if they were created before the schema included them)
+        const products = user.products || [];
+        const winnings = user.winnings || [];
+        const bids = user.bids || [];
+        const watchList = user.watchList || [];
+
+        const totalAuctions = products.length;
+        const totalWinnings = winnings.length;
+        const totalBids = bids.length;
+        const watchListCount = watchList.length;
 
         // Get active auctions
-        const activeAuctions = user.products.filter(product => 
-            product.status === "Live" && new Date(product.auctionEndTime) > new Date()
+        const activeAuctions = products.filter(product => 
+            product && product.status === "Live" && new Date(product.auctionEndTime) > new Date()
         );
 
         // Get completed auctions
-        const completedAuctions = user.products.filter(product => 
-            product.status === "Sold" || new Date(product.auctionEndTime) <= new Date()
+        const completedAuctions = products.filter(product => 
+            product && (product.status === "Sold" || new Date(product.auctionEndTime) <= new Date())
         );
 
         // Calculate total value of winnings
-        const totalWinningsValue = user.winnings.reduce((sum, product) => 
-            sum + (product.finalPrice || product.startingPrice || 0), 0
+        const totalWinningsValue = winnings.reduce((sum, product) => 
+            sum + (product ? (product.finalPrice || product.startingPrice || 0) : 0), 0
         );
 
         // Get recent activity (last 10 activities)
@@ -181,7 +187,7 @@ exports.getUserHistory = async (req, res) => {
 
         if (type === "all" || type === "won") {
             const user = await User.findById(userId).populate('winnings');
-            const wonItems = user.winnings.map(item => ({
+            const wonItems = (user?.winnings || []).filter(Boolean).map(item => ({
                 id: item._id,
                 type: "won",
                 title: item.title,
@@ -199,15 +205,17 @@ exports.getUserHistory = async (req, res) => {
                 .sort({ createdAt: -1 })
                 .limit(parseInt(limit));
 
-            const bidHistory = userBids.map(bid => ({
-                id: bid._id,
-                type: "bid",
-                title: bid.product.title,
-                amount: bid.amount,
-                date: bid.createdAt,
-                status: bid.product.status === "Sold" ? "completed" : "active",
-                image: bid.product.images?.url || null
-            }));
+            const bidHistory = userBids
+                .filter(bid => bid.product) // skip bids whose product was deleted
+                .map(bid => ({
+                    id: bid._id,
+                    type: "bid",
+                    title: bid.product.title,
+                    amount: bid.amount,
+                    date: bid.createdAt,
+                    status: bid.product.status === "Sold" ? "completed" : "active",
+                    image: bid.product.images?.url || null
+                }));
             history.push(...bidHistory);
         }
 
@@ -243,7 +251,7 @@ exports.getUserWinnings = async (req, res) => {
             });
         }
 
-        const winnings = user.winnings.map(item => ({
+        const winnings = (user.winnings || []).filter(Boolean).map(item => ({
             id: item._id,
             title: item.title,
             description: item.description,
