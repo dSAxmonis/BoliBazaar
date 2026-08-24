@@ -8,7 +8,8 @@ const setupSocket = (server) => {
     const io = new Server(server, {
         cors: {
             origin: [
-                process.env.FRONTEND_URL || 'http://localhost:3000',
+                process.env.FRONTEND_URL || 'http://localhost:5173',
+                'https://boli-bazaar-pearl.vercel.app',
                 'https://bolibazaar.vercel.app',
                 'https://bolibazaar-git-main.vercel.app'
             ],

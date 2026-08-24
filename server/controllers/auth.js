@@ -318,7 +318,11 @@ exports.verifyOtp = async (req, res) => {
 
 exports.googleLogin = async (req, res) => {
     try {
-        const { uid, firstName, lastName, email, imageUrl, action } = req.body;
+        let { uid, firstName, lastName, email, imageUrl, action } = req.body;
+
+        // Fallback defaults to prevent Mongoose schema validation failures
+        if (!firstName) firstName = "Google";
+        if (!lastName) lastName = "User";
 
         let user = await User.findOne({ $or: [{ uid }, { email }] });
 
