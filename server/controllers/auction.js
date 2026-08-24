@@ -268,7 +268,10 @@ exports.fetchAuctions = async (req, res) => {
             .populate("category", "name")
             .populate("seller", "firstName lastName");
 
-        if (!auctions || auctions.length === 0) {
+        // Filter out orphan auctions where the seller no longer exists
+        const validAuctions = auctions.filter(auction => auction.seller !== null);
+
+        if (!validAuctions || validAuctions.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: "No Live Auctions Found"
@@ -278,7 +281,7 @@ exports.fetchAuctions = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Live auctions returned successfully",
-            auctions
+            auctions: validAuctions
         });
     } catch (error) {
         console.error("Error fetching auctions:", error);
@@ -294,14 +297,16 @@ exports.fetchFeaturedAuctions = async (req, res) => {
     try {
         const featured = await Product.find({ status: "Live" })
             .sort({ createdAt: -1 })
-            .limit(3)
             .populate("category", "name")
             .populate("seller", "firstName lastName image");
+
+        // Filter out orphan auctions where the seller no longer exists
+        const validFeatured = featured.filter(auction => auction.seller !== null).slice(0, 3);
 
         return res.status(200).json({
             success: true,
             message: "Featured auctions fetched successfully",
-            featured
+            featured: validFeatured
         });
     } catch (error) {
         console.error("Error fetching featured auctions:", error);
@@ -336,10 +341,10 @@ exports.fetchSpecificAuction = async (req, res) => {
             })
             .exec();
         
-        if(!auctionDetails){
+        if(!auctionDetails || auctionDetails.seller === null){
             return res.status(400).json({
                 success:false,
-                message:"Could not find the Auction Details"
+                message:"Could not find the Auction Details or the seller no longer exists"
             })
         }
 

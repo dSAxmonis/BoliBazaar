@@ -137,10 +137,19 @@ exports.getUserProfile = async (req, res) => {
         const userId = req.user.id;
         
         const user = await User.findById(userId)
-            .populate('products')
-            .populate('winnings')
+            .populate({
+                path: 'products',
+                populate: { path: 'seller', select: 'firstName lastName' }
+            })
+            .populate({
+                path: 'winnings',
+                populate: { path: 'seller', select: 'firstName lastName' }
+            })
             .populate('bids')
-            .populate('watchList');
+            .populate({
+                path: 'watchList',
+                populate: { path: 'seller', select: 'firstName lastName' }
+            });
 
         if (!user) {
             return res.status(404).json({
@@ -151,10 +160,10 @@ exports.getUserProfile = async (req, res) => {
 
         // Get user statistics (guarded - some accounts may be missing these
         // fields if they were created before the schema included them)
-        const products = (user.products || []).filter(Boolean);
-        const winnings = (user.winnings || []).filter(Boolean);
+        const products = (user.products || []).filter(p => p !== null && p.seller !== null);
+        const winnings = (user.winnings || []).filter(w => w !== null && w.seller !== null);
         const bids = (user.bids || []).filter(Boolean);
-        const watchList = (user.watchList || []).filter(Boolean);
+        const watchList = (user.watchList || []).filter(w => w !== null && w.seller !== null);
 
         const totalAuctions = products.length;
         const totalWinnings = winnings.length;
@@ -435,10 +444,15 @@ exports.getWatchlist = async (req, res) => {
       });
     }
 
+    // Filter out deleted products (null) and products whose seller no longer exists (orphan products)
+    const validWatchlist = (user.watchList || []).filter(
+      (item) => item !== null && item.seller !== null
+    );
+
     return res.status(200).json({
       success: true,
       message: "Watchlist retrieved successfully",
-      watchlist: user.watchList || []
+      watchlist: validWatchlist
     });
   } catch (error) {
     console.error("Error fetching watchlist:", error);
