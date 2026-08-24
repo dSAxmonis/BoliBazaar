@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
-const { redisClient } = require('../config/redis');
+const { cacheSet, cacheGet, cacheDel } = require('../config/redis');
 const { registerUserSchema, loginUserSchema } = require('../config/zodSchemas');
 const sendEmail = require('../utils/sendEmail');
 const { verifyEmailHtml } = require('../templates/verifyEmailHtml');
@@ -85,7 +85,7 @@ exports.signup = async (req, res) => {
         });
 
         // Store verification data in Redis for 5 minutes
-        await redisClient.set(verifyKey, dataToStore, { EX: 300 });
+        await cacheSet(verifyKey, dataToStore, { EX: 300 });
 
         const subject = "Verify your email address - BoliBazaar";
         const emailHtml = verifyEmailHtml({ email, token: verifyToken });
@@ -122,7 +122,7 @@ exports.verifyUser = async (req, res) => {
             .digest("hex");
 
         const verifyKey = `verify:${tokenHash}`;
-        const userDataJson = await redisClient.get(verifyKey);
+        const userDataJson = await cacheGet(verifyKey);
 
         if (!userDataJson) {
             return res.status(400).json({
@@ -150,7 +150,7 @@ exports.verifyUser = async (req, res) => {
             role: userData.role || "User",
         });
 
-        await redisClient.del(verifyKey);
+        await cacheDel(verifyKey);
 
         return res.status(201).json({
             success: true,
@@ -213,7 +213,7 @@ exports.login = async (req, res) => {
         const otpKey = `otp:${email}`;
 
         // Store OTP in Redis for 5 minutes
-        await redisClient.set(otpKey, JSON.stringify(otp), { EX: 300 });
+        await cacheSet(otpKey, JSON.stringify(otp), { EX: 300 });
 
         const subject = "OTP for Login Verification - BoliBazaar";
         const otpHtml = getOtpHtml({ email, otp });
@@ -245,7 +245,7 @@ exports.verifyOtp = async (req, res) => {
         }
 
         const otpKey = `otp:${email}`;
-        const storedOtpString = await redisClient.get(otpKey);
+        const storedOtpString = await cacheGet(otpKey);
 
         if (!storedOtpString) {
             return res.status(400).json({
@@ -264,7 +264,7 @@ exports.verifyOtp = async (req, res) => {
         }
 
         // Delete OTP from Redis
-        await redisClient.del(otpKey);
+        await cacheDel(otpKey);
 
         const user = await User.findOne({ email });
         if (!user) {

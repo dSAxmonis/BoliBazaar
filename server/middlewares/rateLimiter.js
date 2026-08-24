@@ -1,4 +1,4 @@
-const { redisClient } = require("../config/redis");
+const { cacheIncr, cacheExpire, cacheTtl } = require("../config/redis");
 
 const createRateLimiter = ({ prefix, limit, windowSeconds }) => {
   return async (req, res, next) => {
@@ -6,13 +6,13 @@ const createRateLimiter = ({ prefix, limit, windowSeconds }) => {
       const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
       const key = `rl:${prefix}:${ip}`;
 
-      const requests = await redisClient.incr(key);
+      const requests = await cacheIncr(key);
 
       if (requests === 1) {
-        await redisClient.expire(key, windowSeconds);
+        await cacheExpire(key, windowSeconds);
       }
 
-      const ttl = await redisClient.ttl(key);
+      const ttl = await cacheTtl(key);
 
       if (requests > limit) {
         res.set("Retry-After", ttl);
@@ -26,7 +26,7 @@ const createRateLimiter = ({ prefix, limit, windowSeconds }) => {
       next();
     } catch (error) {
       console.error("[rate-limit] Error:", error);
-      // Fail open if Redis has issues
+      // Fail open if Redis/cache has issues
       next();
     }
   };
