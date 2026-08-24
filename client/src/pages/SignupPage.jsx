@@ -27,7 +27,7 @@ const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const {loading} = useSelector((state) => state.profile);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -98,8 +98,13 @@ const SignupPage = () => {
       }
   }
 
-  const handleGoogleLogin = () => {
-      dispatch(googleLogin(navigate, "signup"));
+  const handleGoogleLogin = async () => {
+      setIsGoogleLoading(true);
+      try {
+          await dispatch(googleLogin(navigate, "signup"));
+      } finally {
+          setIsGoogleLoading(false);
+      }
   }
 
   useEffect(() => {
@@ -388,11 +393,11 @@ const SignupPage = () => {
 
               <Button
                 type="submit"
-                disabled={isLoading || loading}
+                disabled={isLoading}
                 className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium py-3 transition-all duration-200 disabled:opacity-50"
                 onClick={() => console.log("Button clicked, agreeToTerms:", watch("agreeToTerms"))}
               >
-                {isLoading || loading ? (
+                {isLoading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Creating account...</span>
@@ -408,9 +413,10 @@ const SignupPage = () => {
             <Button
               className="w-full text-black font-medium py-3 transition-all duration-200 disabled:opacity-50
               border border-slate-200 rounded-xl hover:bg-slate-100 cursor-pointer"
+              disabled={isGoogleLoading}
               onClick={handleGoogleLogin}
             >
-              {isLoading || loading ? (
+              {isGoogleLoading ? (
                 <div className="flex items-center justify-center space-x-5">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Signing Up with Google...</span>

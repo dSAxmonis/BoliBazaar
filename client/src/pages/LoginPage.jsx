@@ -25,14 +25,25 @@ const LoginPage = () => {
       formState: { errors, isSubmitSuccessful },
   } = useForm();
 
-  const {loading} = useSelector((state) => state.profile);
+  const [isFormLoading, setIsFormLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const onSubmit = async (data) => {
-      dispatch(login(data, navigate));
+      setIsFormLoading(true);
+      try {
+          await dispatch(login(data, navigate));
+      } finally {
+          setIsFormLoading(false);
+      }
   }
 
-  const handleGoogleLogin = () => {
-    dispatch(googleLogin(navigate, "login"));
+  const handleGoogleLogin = async () => {
+      setIsGoogleLoading(true);
+      try {
+          await dispatch(googleLogin(navigate, "login"));
+      } finally {
+          setIsGoogleLoading(false);
+      }
   }
 
   useEffect(() => {
@@ -159,10 +170,10 @@ const LoginPage = () => {
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={isFormLoading}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-3 transition-all duration-200 disabled:opacity-50"
               >
-                {loading ? (
+                {isFormLoading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Signing in...</span>
@@ -178,9 +189,10 @@ const LoginPage = () => {
             <Button
               className="w-full text-black font-medium py-3 transition-all duration-200 disabled:opacity-50
               border border-slate-200 rounded-xl hover:bg-slate-100 cursor-pointer"
+              disabled={isGoogleLoading}
               onClick={handleGoogleLogin}
             >
-              {loading ? (
+              {isGoogleLoading ? (
                 <div className="flex items-center justify-center space-x-5">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Signing In with Google...</span>
