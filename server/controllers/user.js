@@ -370,4 +370,84 @@ exports.deleteUserAccount = async (req, res) => {
   }
 };
 
+exports.toggleWatchlist = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { productId } = req.body;
+
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID is required"
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    const index = user.watchList.indexOf(productId);
+    let isAdded = false;
+    if (index === -1) {
+      user.watchList.push(productId);
+      isAdded = true;
+    } else {
+      user.watchList.splice(index, 1);
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: isAdded ? "Added to watchlist" : "Removed from watchlist",
+      isAdded,
+      watchList: user.watchList
+    });
+  } catch (error) {
+    console.error("Error toggling watchlist:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while toggling watchlist",
+      error: error.message
+    });
+  }
+};
+
+exports.getWatchlist = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId).populate({
+      path: "watchList",
+      populate: {
+        path: "seller",
+        select: "firstName lastName"
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Watchlist retrieved successfully",
+      watchlist: user.watchList || []
+    });
+  } catch (error) {
+    console.error("Error fetching watchlist:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while fetching watchlist",
+      error: error.message
+    });
+  }
+};
+
 

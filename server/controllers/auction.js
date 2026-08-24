@@ -134,6 +134,13 @@ exports.deleteAuction = async (req, res) => {
             })
         }
 
+        if (auction.bids && auction.bids.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot delete auction after bidding has started"
+            });
+        }
+
         // remove from category schema too
         await Category.updateMany(
             { products: auctionId },
@@ -202,6 +209,13 @@ exports.editAuction = async (req, res) => {
             return res.status(403).json({
                 success: false,
                 message: "Not authorized to edit this auction"
+            });
+        }
+
+        if (auction.bids && auction.bids.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot edit auction after bidding has started"
             });
         }
 
