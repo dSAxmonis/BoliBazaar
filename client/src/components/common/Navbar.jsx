@@ -55,10 +55,12 @@ const Navbar = () => {
                         </span>
                     </Link>
                     <div className="flex items-center space-x-8">
-                        <Link to="/auctions" className="text-slate-600 hover:text-blue-600 flex items-center gap-4 transition-all duration-300">
-                            <FaGavel />
-                            <span className="hidden md:block">Auctions</span>
-                        </Link>
+                        {user && (
+                            <Link to="/auctions" className="text-slate-600 hover:text-blue-600 flex items-center gap-4 transition-all duration-300">
+                                <FaGavel />
+                                <span className="hidden md:block">Auctions</span>
+                            </Link>
+                        )}
                         <Link to="/about" className="text-slate-600 hover:text-blue-600 flex items-center gap-4 transition-all duration-300">
                             <FaUser />
                             <span className="hidden md:block">About</span>
