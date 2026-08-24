@@ -3,7 +3,7 @@ import { userEndpoints } from '../apis';
 import { apiConnector } from '../apiConnector';
 import { setLoading, setUser } from '../../slices/profileSlice';
 
-const { TOP_BUYERS, TOP_SELLERS, GET_USER_PROFILE, GET_USER_HISTORY, GET_USER_WINNINGS, DELETE_USER_ACCOUNT, UPDATE_PROFILE } = userEndpoints;
+const { TOP_BUYERS, TOP_SELLERS, GET_USER_PROFILE, GET_USER_HISTORY, GET_USER_WINNINGS, DELETE_USER_ACCOUNT, UPDATE_PROFILE, TOGGLE_WATCHLIST, GET_WATCHLIST } = userEndpoints;
 
 export const topBuyers = async () => {
     //const toastId = toast.loading("Loading...");
@@ -178,3 +178,31 @@ export function updateUserProfile(updates){
         }
     }
 }
+
+export const toggleWatchlist = async (productId) => {
+    try {
+        const response = await apiConnector("POST", TOGGLE_WATCHLIST, { productId });
+        if (!response.data.success) {
+            throw new Error(response.data.message);
+        }
+        return response.data;
+    } catch (error) {
+        console.log("Error toggling watchlist", error);
+        toast.error("Could not update watchlist");
+        return null;
+    }
+};
+
+export const fetchWatchlist = async () => {
+    try {
+        const response = await apiConnector("GET", GET_WATCHLIST);
+        if (!response.data.success) {
+            throw new Error(response.data.message);
+        }
+        return response.data.watchlist;
+    } catch (error) {
+        console.log("Error fetching watchlist", error);
+        toast.error("Could not fetch watchlist");
+        return [];
+    }
+};

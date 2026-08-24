@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react';
 import auctionPng from '../assets/auction.png';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 
 import EmptyLoader from '../components/EmptyLoader';
 import { fetchAuctions } from '../services/operations/auctionAPI';
 import { ChevronRight, Star, Users, Shield, Clock } from "lucide-react";
 import { motion, useInView } from "motion/react";
-import { FaGavel, FaGem, FaCar, FaPalette, FaHome, FaTshirt, FaLaptop, FaGamepad } from "react-icons/fa"
+import { FaGavel, FaGem, FaCar, FaPalette, FaHome, FaTshirt, FaLaptop, FaGamepad } from "react-icons/fa";
 import { fetchFeaturedAuctions } from '../services/operations/auctionAPI';
 
 const categories = [
@@ -18,7 +20,7 @@ const categories = [
     { name: "Electronics", icon: FaLaptop, color: "from-indigo-500 to-purple-500", count: "1.5k+" },
     { name: "Gaming", icon: FaGamepad, color: "from-red-500 to-pink-500", count: "890+" },
     { name: "Antiques", icon: FaGavel, color: "from-amber-500 to-yellow-500", count: "670+" },
-  ]
+];
 
 const features = [
     {
@@ -36,13 +38,13 @@ const features = [
       title: "Real-time Updates",
       description: "Live bidding updates and instant notifications",
     },
-  ]
+];
   
 const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.6 },
-}
+};
 
 const staggerContainer = {
     animate: {
@@ -50,11 +52,11 @@ const staggerContainer = {
         staggerChildren: 0.1,
         },
     },
-}
+};
 
-function AnimatedSection({ children, className = " "}){
+function AnimatedSection({ children, className = " ", ...props }){
     const ref = useRef(null);
-    const isInView = useInView(ref, { once:true, margin: "-100px" });
+    const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return(
         <motion.div
@@ -63,37 +65,22 @@ function AnimatedSection({ children, className = " "}){
             animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
             transition={{ duration: 0.6 }}
             className={className}
+            {...props}
         >
             {children}
         </motion.div>
-    )
+    );
 }
 
 const Home = () => {
-
-    const [auctions, setAuctions] = useState([]);
-    const [featuredAuctions, setFeaturedAuctions] = useState([]);
+    const { user } = useSelector((state) => state.profile);
+    const navigate = useNavigate();
 
     useEffect(() => {
-        try{
-            const getAuctions = async () => {
-                const response = await fetchAuctions();
-  
-                setAuctions(response);
-            }
-
-            const getFeatured = async () => {
-                const response = await fetchFeaturedAuctions();
-                setFeaturedAuctions(response);
-            }
-   
-            getAuctions();
-            getFeatured();
+        if (user) {
+            navigate('/auctions');
         }
-        catch(error){
-            console.log(error);
-        }
-    },[]);
+    }, [user, navigate]);
 
   return (
     <>
@@ -193,42 +180,54 @@ const Home = () => {
             </div>
         </AnimatedSection>
 
-        <AnimatedSection className="py-16 px-4 sm:px-6 lg:px-8">
+        <AnimatedSection id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 border-t border-b border-slate-200">
             <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold text-slate-800 mb-4">Featured Auctions</h2>
-                <p className="text-xl text-slate-600">Don't miss these exclusive items ending soon</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuredAuctions && featuredAuctions.length > 0 ? (
-                    featuredAuctions.map((auction, idx) => (
-                        <div key={auction._id} className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col">
-                            <img src={auction.images?.url || auctionPng} alt={auction.title} className="w-full h-48 object-cover" />
-                            <div className="p-6 flex-1 flex flex-col">
-                                <h3 className="text-xl font-bold text-slate-800 mb-2 line-clamp-1">{auction.title}</h3>
-                                <p className="text-slate-600 mb-2 line-clamp-2">{auction.description}</p>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">{auction.category?.name}</span>
-                                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">${auction.startingPrice}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs text-slate-500 mb-4">
-                                    <span>By {auction.seller?.firstName} {auction.seller?.lastName}</span>
-                                </div>
-                                <Link to={`/auction/${auction._id}`} className="mt-auto inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all">View Auction</Link>
+                <div className="text-center mb-16">
+                    <h2 className="text-4xl font-bold text-slate-800 mb-4">How It Works</h2>
+                    <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+                        Buy and sell rare items in four simple steps
+                    </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    {[
+                        {
+                            step: "01",
+                            title: "Register Account",
+                            desc: "Sign up and verify your profile with secure email verification.",
+                            color: "text-blue-600"
+                        },
+                        {
+                            step: "02",
+                            title: "Browse Auctions",
+                            desc: "Explore categories or search for specific items live.",
+                            color: "text-purple-600"
+                        },
+                        {
+                            step: "03",
+                            title: "Place Bids",
+                            desc: "Submit your offers. Outbid other buyers in real-time.",
+                            color: "text-pink-600"
+                        },
+                        {
+                            step: "04",
+                            title: "Win & Collect",
+                            desc: "Win the auction and securely acquire your new treasure.",
+                            color: "text-indigo-600"
+                        }
+                    ].map((item, idx) => (
+                        <div key={idx} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 relative border border-slate-100">
+                            <div className={`text-5xl font-extrabold ${item.color} opacity-20 mb-4`}>
+                                {item.step}
                             </div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">{item.title}</h3>
+                            <p className="text-slate-600 text-sm leading-relaxed">{item.desc}</p>
                         </div>
-                    ))
-                ) : (
-                    <div className="col-span-3 flex flex-col items-center gap-1 mx-auto">
-                        <EmptyLoader />
-                        <h1 className='font-medium'>No Featured Auctions Yet!!</h1>
-                    </div>
-                )}
-            </div>
+                    ))}
+                </div>
             </div>
         </AnimatedSection>
 
-        <AnimatedSection className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+        <AnimatedSection id="categories" className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
             <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
                 <h2 className="text-4xl font-bold text-slate-800 mb-4">Explore Categories</h2>
@@ -263,6 +262,58 @@ const Home = () => {
                 </motion.div>
                 ))}
             </motion.div>
+            </div>
+        </AnimatedSection>
+
+        <AnimatedSection id="contact" className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 border-t border-b border-slate-200">
+            <div className="max-w-7xl mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <h2 className="text-4xl font-bold text-slate-800 mb-6">Have Questions? Get in Touch</h2>
+                        <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                            Need help with registration, placing bids, or managing your active auctions? Send us a message and our support team will assist you.
+                        </p>
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shadow-sm">
+                                    <Star className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-slate-800">Email Support</h4>
+                                    <p className="text-slate-600">support@auctioneer.com</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center shadow-sm">
+                                    <Shield className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-slate-800">Security & Verifications</h4>
+                                    <p className="text-slate-600">security@auctioneer.com</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                        <form onSubmit={(e) => { e.preventDefault(); toast.success("Message sent successfully!"); e.target.reset(); }} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Name</label>
+                                <input type="text" placeholder="Your name" className="w-full p-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" required />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Email</label>
+                                <input type="email" placeholder="Your email" className="w-full p-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" required />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Message</label>
+                                <textarea placeholder="Your message" rows={4} className="w-full p-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" required></textarea>
+                            </div>
+                            <button type="submit" className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-bold hover:from-blue-700 hover:to-purple-700 transition-all cursor-pointer">
+                                Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </AnimatedSection>
 
@@ -358,7 +409,7 @@ const Home = () => {
             </div>
         </footer>
     </>
-  )
-}
+  );
+};
 
 export default Home;

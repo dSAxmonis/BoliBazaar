@@ -11,7 +11,7 @@ import { Textarea } from '../../ui/textarea';
 import toast from 'react-hot-toast';
 
 const EditAuction = () => {
-  const { id } = useParams();
+  const { auctionId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -28,19 +28,20 @@ const EditAuction = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!editAuctionForm || editAuctionForm._id !== id) {
-
+    if (!editAuctionForm || editAuctionForm._id !== auctionId) {
       fetchUserAuctions().then((auctions) => {
-        const found = auctions.find((a) => a._id === id);
-        if (found) {
-          dispatch(setEditAuctionForm(found));
+        if (auctions && Array.isArray(auctions)) {
+          const found = auctions.find((a) => a._id === auctionId);
+          if (found) {
+            dispatch(setEditAuctionForm(found));
+          }
         }
       });
     }
-  }, [id, editAuctionForm, dispatch]);
+  }, [auctionId, editAuctionForm, dispatch]);
 
   useEffect(() => {
-    if (editAuctionForm && editAuctionForm._id === id) {
+    if (editAuctionForm && editAuctionForm._id === auctionId) {
       setForm({
         title: editAuctionForm.title || '',
         description: editAuctionForm.description || '',
@@ -50,7 +51,7 @@ const EditAuction = () => {
         preview: editAuctionForm.images?.url || null
       });
     }
-  }, [editAuctionForm, id]);
+  }, [editAuctionForm, auctionId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -84,7 +85,7 @@ const EditAuction = () => {
       if (form.image) {
         formData.append('image', form.image);
       }
-      const updated = await editAuction(id, formData);
+      const updated = await editAuction(auctionId, formData);
       if (updated) {
         toast.success('Auction updated successfully!');
         dispatch(clearEditAuctionForm());
@@ -119,7 +120,7 @@ const EditAuction = () => {
                   <button
                     type="button"
                     onClick={handleRemoveImage}
-                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg animate-pulse"
                   >
                     Remove
                   </button>

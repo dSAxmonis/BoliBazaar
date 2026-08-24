@@ -32,7 +32,9 @@ export const userEndpoints = {
     GET_USER_HISTORY: BASE_URL + "/user/history",
     GET_USER_WINNINGS: BASE_URL + "/user/winnings",
     DELETE_USER_ACCOUNT: BASE_URL + "/user/delete-account",
-    UPDATE_PROFILE: BASE_URL + "/user/update-profile"
+    UPDATE_PROFILE: BASE_URL + "/user/update-profile",
+    TOGGLE_WATCHLIST: BASE_URL + "/user/watchlist",
+    GET_WATCHLIST: BASE_URL + "/user/watchlist"
 }
 
 export const bidEndpoints = {

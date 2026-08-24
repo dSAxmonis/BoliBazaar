@@ -2,7 +2,7 @@ import { TbHomeFilled } from "react-icons/tb";
 import { RiAuctionFill } from "react-icons/ri";
 import { IoMdContact } from "react-icons/io";
 import { HiMiniUsers } from "react-icons/hi2";
-import { Link, useLocation, matchPath, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { setUser } from "../../slices/profileSlice";
@@ -14,19 +14,17 @@ import { RxHamburgerMenu } from "react-icons/rx";
 import { Card } from "../ui/card";
 import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/react";
 import { motion } from "motion/react";
-import { FaGavel, FaUser } from "react-icons/fa"
+import { FaGavel, FaUser } from "react-icons/fa";
 
 const url = import.meta.env.VITE_BASE_URL;
 
 const Navbar = () => {
-
-    const location = useLocation();
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
     const handleLogout = async () => {
         await fetch(`${url}/auth/logout`, {
-            method:"POST",
+            method: "POST",
             credentials: "include"
         });
 
@@ -36,9 +34,9 @@ const Navbar = () => {
         localStorage.removeItem('user');
         toast.success("Logged Out");
         navigate('/');
-    }
+    };
 
-    const {user} = useSelector((state) => state.profile);
+    const { user } = useSelector((state) => state.profile);
 
     return (
         <motion.nav
@@ -54,17 +52,35 @@ const Navbar = () => {
                             Auctioneer
                         </span>
                     </Link>
-                    <div className="flex items-center space-x-8">
-                        {user && (
-                            <Link to="/auctions" className="text-slate-600 hover:text-blue-600 flex items-center gap-4 transition-all duration-300">
+                    
+                    <div className="flex items-center space-x-6 xl:space-x-8">
+                        {user ? (
+                            // Logged-in Menu options (only Auctions)
+                            <Link to="/auctions" className="text-slate-600 hover:text-blue-600 flex items-center gap-2 transition-all duration-300">
                                 <FaGavel />
                                 <span className="hidden md:block">Auctions</span>
                             </Link>
+                        ) : (
+                            // Guest Menu options (Categories, How It Works, Contact, About)
+                            <>
+                                <a href="/#categories" className="text-slate-600 hover:text-blue-600 flex items-center gap-2 transition-all duration-300">
+                                    <RxDashboard />
+                                    <span className="hidden lg:block">Categories</span>
+                                </a>
+                                <a href="/#how-it-works" className="text-slate-600 hover:text-blue-600 flex items-center gap-2 transition-all duration-300">
+                                    <HiMiniUsers />
+                                    <span className="hidden lg:block">How It Works</span>
+                                </a>
+                                <a href="/#contact" className="text-slate-600 hover:text-blue-600 flex items-center gap-2 transition-all duration-300">
+                                    <IoMdContact />
+                                    <span className="hidden lg:block">Contact</span>
+                                </a>
+                                <Link to="/about" className="text-slate-600 hover:text-blue-600 flex items-center gap-2 transition-all duration-300">
+                                    <FaUser />
+                                    <span className="hidden md:block">About</span>
+                                </Link>
+                            </>
                         )}
-                        <Link to="/about" className="text-slate-600 hover:text-blue-600 flex items-center gap-4 transition-all duration-300">
-                            <FaUser />
-                            <span className="hidden md:block">About</span>
-                        </Link>
                     </div>
 
                     {
@@ -86,8 +102,7 @@ const Navbar = () => {
 
                             <div className="flex lg:hidden">
                                 <Popover>
-                                    <PopoverButton className="focus:outline-none
-                                    data-[focus]:outline-1 data-[focus]:outline-white text-[14px] lg:text-[20px] 2xl:text-[20px]">
+                                    <PopoverButton className="focus:outline-none text-[14px]">
                                         <RxHamburgerMenu fontSize={24}/>
                                     </PopoverButton>
                                     <Transition
@@ -99,15 +114,20 @@ const Navbar = () => {
                                         leaveTo="opacity-0 translate-y-1"
                                     >
                                         <PopoverPanel anchor="bottom" className="translate-y-[20px] -translate-x-[10px] z-50">
-                                            <Card className="w-[160px] text-center border-slate-200 bg-white flex flex-col gap-2 p-2">
+                                            <Card className="w-[180px] text-center border-slate-200 bg-white flex flex-col gap-2 p-2 shadow-lg">
+                                                <a href="/#categories" className="text-slate-600 hover:text-blue-600 py-1 transition-all duration-300 text-sm">Categories</a>
+                                                <a href="/#how-it-works" className="text-slate-600 hover:text-blue-600 py-1 transition-all duration-300 text-sm">How It Works</a>
+                                                <a href="/#contact" className="text-slate-600 hover:text-blue-600 py-1 transition-all duration-300 text-sm">Contact</a>
+                                                <Link to="/about" className="text-slate-600 hover:text-blue-600 py-1 transition-all duration-300 text-sm">About</Link>
+                                                <div className="h-[1px] bg-slate-200 w-full my-1"></div>
                                                 <Link to="/login" className="border border-slate-200 rounded-md">
-                                                    <div className="hover:bg-blue-50 px-4 py-2 rounded-md transition-all duration-300">
+                                                    <div className="hover:bg-blue-50 px-4 py-2 rounded-md transition-all duration-300 text-sm">
                                                         Login
                                                     </div>
                                                 </Link>
                                                 <Link to="/signup">
                                                     <div className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 
-                                                    hover:to-purple-700 px-4 py-2 rounded-md transition-all duration-300 text-white">
+                                                    hover:to-purple-700 px-4 py-2 rounded-md transition-all duration-300 text-white text-sm">
                                                         Sign Up
                                                     </div>
                                                 </Link>
@@ -130,22 +150,19 @@ const Navbar = () => {
                                     className="flex cursor-pointer items-center place-content-center gap-3 px-3 text-red-600 p-2 rounded-lg transition-all duration-300">
                                     <FiLogOut />Log Out
                                 </button>
-                                {
-                                    user &&
-                                    <button
-                                        onClick={() => navigate('/dashboard/my-profile')}
-                                        className="flex cursor-pointer items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
-                                        title="Dashboard"
-                                    >
-                                        <RxDashboard className="w-5 h-5" />
-                                        <span className="hidden md:inline">Dashboard</span>
-                                    </button>
-                                }
+                                <button
+                                    onClick={() => navigate('/dashboard/my-profile')}
+                                    className="flex cursor-pointer items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
+                                    title="Dashboard"
+                                >
+                                    <RxDashboard className="w-5 h-5" />
+                                    <span className="hidden md:inline">Dashboard</span>
+                                </button>
                             </div>
+                            
                             <div className="flex lg:hidden">
                                 <Popover>
-                                    <PopoverButton className="focus:outline-none
-                                    data-[focus]:outline-1 data-[focus]:outline-white text-[14px] lg:text-[20px] 2xl:text-[20px]">
+                                    <PopoverButton className="focus:outline-none text-[14px]">
                                         <RxHamburgerMenu fontSize={24}/>
                                     </PopoverButton>
                                     <Transition
@@ -157,24 +174,19 @@ const Navbar = () => {
                                         leaveTo="opacity-0 translate-y-1"
                                     >
                                         <PopoverPanel anchor="bottom" className="translate-y-[20px] -translate-x-[10px] z-50">
-                                            <Card className="w-[160px] text-center justify-center items-center border-slate-200 bg-white flex flex-col gap-2 p-2">
-                                                {
-                                                    user &&
-                                                    <button
-                                                        onClick={() => navigate('/dashboard/my-profile')}
-                                                        className="w-full justify-center flex cursor-pointer items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
-                                                        title="Dashboard"
-                                                    >
-                                                        <RxDashboard className="w-5 h-5" />
-                                                        <span className="md:inline">Dashboard</span>
-                                                    </button>
-                                                }
-                                                {/* <div className="text-black flex items-center px-2 gap-2 w-full">
-                                                    <Notification />
-                                                    <span>Notifications</span>
-                                                </div> */}
+                                            <Card className="w-[180px] text-center border-slate-200 bg-white flex flex-col gap-2 p-2 shadow-lg">
+                                                <Link to="/auctions" className="text-slate-600 hover:text-blue-600 py-1 transition-all duration-300 text-sm">Auctions</Link>
+                                                <div className="h-[1px] bg-slate-200 w-full my-1"></div>
+                                                <button
+                                                    onClick={() => navigate('/dashboard/my-profile')}
+                                                    className="w-full justify-center flex cursor-pointer items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all duration-300 text-sm"
+                                                    title="Dashboard"
+                                                >
+                                                    <RxDashboard className="w-5 h-5" />
+                                                    <span className="md:inline">Dashboard</span>
+                                                </button>
                                                 <button onClick={handleLogout}
-                                                    className="flex cursor-pointer items-center place-content-center gap-3 px-3 text-red-600 p-2 rounded-lg transition-all duration-300">
+                                                    className="flex cursor-pointer items-center place-content-center gap-3 px-3 text-red-600 p-2 rounded-lg transition-all duration-300 text-sm">
                                                     <FiLogOut />Log Out
                                                 </button>
                                             </Card>
@@ -187,9 +199,7 @@ const Navbar = () => {
                 </div>
             </div>
         </motion.nav>
-    )
+    );
 };
 
-
 export default Navbar;
-

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
-import { deleteUserAccount, getUserProfile, updateUserProfile } from '../../../services/operations/userAPI';
+import { deleteUserAccount, getUserProfile, updateUserProfile, fetchWatchlist, toggleWatchlist } from '../../../services/operations/userAPI';
 import { formatDate } from "../../../services/formatDate";
 import { FaUser, FaTrophy, FaGavel, FaEye, FaClock, FaDollarSign } from "react-icons/fa";
 import { RiAuctionLine } from "react-icons/ri";
@@ -22,9 +22,23 @@ const MyProfile = () => {
     const [editImageFile, setEditImageFile] = useState(null);
     const [editPreview, setEditPreview] = useState(null);
     const [savingProfile, setSavingProfile] = useState(false);
+    const [watchlistItems, setWatchlistItems] = useState([]);
+    const [loadingWatchlist, setLoadingWatchlist] = useState(false);
     const fileInputRef = useRef(null);
     const navigate = useNavigate();
     const dispatch = useDispatch();
+
+    useEffect(() => {
+        if (activeTab === "watchlist") {
+            const getWatchlistData = async () => {
+                setLoadingWatchlist(true);
+                const items = await fetchWatchlist();
+                setWatchlistItems(items || []);
+                setLoadingWatchlist(false);
+            };
+            getWatchlistData();
+        }
+    }, [activeTab]);
 
     useEffect(() => {
         const fetchProfileData = async () => {
@@ -77,6 +91,7 @@ const MyProfile = () => {
 
     const tabs = [
         { id: "overview", name: "Overview", icon: <FaUser className="w-4 h-4" /> },
+        { id: "watchlist", name: "Watchlist", icon: <FaEye className="w-4 h-4" /> },
         { id: "activity", name: "Recent Activity", icon: <FaClock className="w-4 h-4" /> },
         { id: "stats", name: "Statistics", icon: <FaTrophy className="w-4 h-4" /> }
     ];
@@ -277,7 +292,7 @@ const MyProfile = () => {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Card className="bg-white/80 backdrop-blur-sm">
+                                <Card onClick={() => setActiveTab("watchlist")} className="bg-white/80 backdrop-blur-sm cursor-pointer hover:shadow-md transition-all duration-300">
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
                                             <FaEye className="w-5 h-5 text-blue-600" />
@@ -289,7 +304,7 @@ const MyProfile = () => {
                                         <p className="text-gray-600">Items in your watchlist</p>
                                     </CardContent>
                                 </Card>
-                                <Card className="bg-white/80 backdrop-blur-sm">
+                                <Card onClick={() => navigate("/dashboard/my-auctions")} className="bg-white/80 backdrop-blur-sm cursor-pointer hover:shadow-md transition-all duration-300">
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
                                             <BiTime className="w-5 h-5 text-green-600" />
@@ -302,6 +317,81 @@ const MyProfile = () => {
                                     </CardContent>
                                 </Card>
                             </div>
+                        </motion.div>
+                    )}
+
+                    {activeTab === "watchlist" && (
+                        <motion.div
+                            key="watchlist"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <FaEye className="w-5 h-5 text-blue-600" />
+                                        My Watchlist
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {loadingWatchlist ? (
+                                        <div className="text-center py-8">
+                                            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                                            <p className="text-gray-500">Loading watchlist...</p>
+                                        </div>
+                                    ) : watchlistItems.length > 0 ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {watchlistItems.map((item) => (
+                                                <div key={item._id} className="border border-slate-100 rounded-xl overflow-hidden hover:shadow-lg transition-all bg-white flex flex-col">
+                                                    <img src={item.images?.url} alt={item.title} className="w-full h-40 object-cover" />
+                                                    <div className="p-4 flex-1 flex flex-col">
+                                                        <h4 className="font-bold text-gray-800 line-clamp-1">{item.title}</h4>
+                                                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.description}</p>
+                                                        <div className="flex justify-between items-center mt-4">
+                                                            <div>
+                                                                <span className="text-xs text-gray-500">Current Bid</span>
+                                                                <p className="font-bold text-green-600">${item.currentBid || item.startingPrice}</p>
+                                                            </div>
+                                                            <button
+                                                                onClick={async (e) => {
+                                                                    e.preventDefault();
+                                                                    const res = await toggleWatchlist(item._id);
+                                                                    if (res) {
+                                                                        toast.success("Removed from watchlist");
+                                                                        setWatchlistItems(prev => prev.filter(w => w._id !== item._id));
+                                                                    }
+                                                                }}
+                                                                className="text-xs text-red-500 hover:text-red-700 font-semibold"
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => navigate(`/auction/${item._id}`)}
+                                                            className="w-full mt-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+                                                        >
+                                                            View Live Auction
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-12">
+                                            <FaEye className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                            <p className="text-gray-500 font-medium">Your watchlist is empty</p>
+                                            <button
+                                                onClick={() => navigate("/auctions")}
+                                                className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 font-semibold"
+                                            >
+                                                Explore Live Auctions
+                                            </button>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         </motion.div>
                     )}
 

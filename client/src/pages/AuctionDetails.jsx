@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
-import { fetchAuctionDetails } from '../services/operations/auctionAPI';
+import { fetchAuctionDetails, deleteAuction } from '../services/operations/auctionAPI';
+import { setEditAuctionForm } from '../slices/profileSlice';
+import { toggleWatchlist, fetchWatchlist } from '../services/operations/userAPI';
 import { placeBid, editBid, deleteBid } from '../services/operations/bidAPI';
 import CountdownTimer from '../components/CountdownTimer';
 import EmptyLoader from '../components/EmptyLoader';
@@ -30,11 +32,42 @@ const AuctionDetails = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [highlightBidId, setHighlightBidId] = useState(null);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const socketRef = useRef(null);
 
   const { register, handleSubmit, formState: { errors } } = useForm();
   const { register: editRegister, handleSubmit: handleEditSubmit, formState: { errors: editErrors } } = useForm();
   const { user } = useSelector((state) => state.profile);
+  const [isWatched, setIsWatched] = useState(false);
+
+  useEffect(() => {
+    const checkWatchStatus = async () => {
+      if (user && auctionId) {
+        try {
+          const watchlist = await fetchWatchlist();
+          if (watchlist && Array.isArray(watchlist)) {
+            const watched = watchlist.some(item => item._id === auctionId);
+            setIsWatched(watched);
+          }
+        } catch (error) {
+          console.error("Error checking watch status", error);
+        }
+      }
+    };
+    checkWatchStatus();
+  }, [auctionId, user]);
+
+  const handleWatchlistToggle = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    const res = await toggleWatchlist(auctionId);
+    if (res) {
+      setIsWatched(res.isAdded);
+      toast.success(res.message);
+    }
+  };
 
   useEffect(() => {
     const getFullAuctionDetails = async () => {
@@ -324,14 +357,86 @@ const AuctionDetails = () => {
               return null;
             })()}
 
-            <motion.button
-              className='mt-4 cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 transition-all px-10 py-2 rounded-lg text-white font-medium'
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setIsModalOpen(true)}
-            >
-              Place Bid
-            </motion.button>
+            {user?.id === auctionData?.seller?._id ? (
+              <div className="mt-6 p-4 rounded-xl border border-blue-200 bg-blue-50/50 flex flex-col gap-3">
+                <span className="text-sm font-bold text-blue-700">You are the seller of this auction listing</span>
+                {auctionData?.currentBid > 0 ? (
+                  <span className="text-xs text-red-500 font-semibold bg-red-50 p-2 rounded border border-red-200">
+                    Bidding has started. This auction can no longer be edited or deleted.
+                  </span>
+                ) : (
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => {
+                        dispatch(setEditAuctionForm(auctionData));
+                        navigate(`/dashboard/edit-auction/${auctionData._id}`);
+                      }}
+                      className="cursor-pointer bg-blue-600 hover:bg-blue-700 transition-all px-6 py-2 rounded-lg text-white font-medium text-sm"
+                    >
+                      Edit Auction
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (window.confirm("Are you sure you want to delete this auction?")) {
+                          try {
+                            const res = await deleteAuction(auctionData._id);
+                            if (res) {
+                              toast.success("Auction deleted successfully");
+                              navigate("/dashboard/my-auctions");
+                            }
+                          } catch (err) {
+                            toast.error("Failed to delete auction");
+                          }
+                        }
+                      }}
+                      className="cursor-pointer bg-red-600 hover:bg-red-700 transition-all px-6 py-2 rounded-lg text-white font-medium text-sm"
+                    >
+                      Delete Auction
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              user?.id !== auctionData?.seller?._id && (
+                <div className="flex gap-4 items-center flex-wrap">
+                  {(() => {
+                    const userBid = auctionData?.bids?.find(bid => bid?.bidder?._id === user?.id);
+                    return userBid ? (
+                      <motion.button
+                        onClick={() => handleDeleteBid(userBid._id)}
+                        className='mt-4 cursor-pointer bg-red-600 hover:bg-red-700 transition-all px-10 py-2 rounded-lg text-white font-medium'
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Delete Bid
+                      </motion.button>
+                    ) : (
+                      <motion.button
+                        className='mt-4 cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 transition-all px-10 py-2 rounded-lg text-white font-medium'
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setIsModalOpen(true)}
+                      >
+                        Place Bid
+                      </motion.button>
+                    );
+                  })()}
+
+                  <motion.button
+                    onClick={handleWatchlistToggle}
+                    className={`mt-4 cursor-pointer px-6 py-2 rounded-lg font-medium border transition-all ${
+                      isWatched
+                        ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                        : 'border-slate-300 hover:bg-slate-50 text-slate-700 bg-white'
+                    }`}
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {isWatched ? '★ Watched' : '☆ Watchlist'}
+                  </motion.button>
+                </div>
+              )
+            )}
           </div>
         </motion.div>
 

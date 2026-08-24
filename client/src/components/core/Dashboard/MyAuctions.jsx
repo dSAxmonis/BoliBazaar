@@ -222,26 +222,35 @@ const MyAuctions = () => {
                                         </div>
                                     </div>
 
-                                            <div className="flex gap-2 pt-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="flex-1 flex items-center gap-2 hover:bg-blue-50"
-                                                    onClick={() => handleEdit(auction)}
-                                                >
-                                                    <LiaEditSolid className="w-4 h-4" />
-                                                    Edit
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleRemove(auction._id)}
-                                                    className="flex items-center gap-2 hover:bg-red-50 text-red-600 border-red-200"
-                                                >
-                                                    <AiOutlineDelete className="w-4 h-4" />
-                                                    Delete
-                                                </Button>
-                                </div>
+                                            <div className="flex flex-col gap-2 pt-2">
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={auction.currentBid > 0}
+                                                        className="flex-1 flex items-center gap-2 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        onClick={() => handleEdit(auction)}
+                                                    >
+                                                        <LiaEditSolid className="w-4 h-4" />
+                                                        Edit
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={auction.currentBid > 0}
+                                                        onClick={() => handleRemove(auction._id)}
+                                                        className="flex-1 flex items-center gap-2 hover:bg-red-50 text-red-600 border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        <AiOutlineDelete className="w-4 h-4" />
+                                                        Delete
+                                                    </Button>
+                                                </div>
+                                                {auction.currentBid > 0 && (
+                                                    <p className="text-[11px] text-red-500 font-semibold text-center mt-1">
+                                                        Cannot modify: Active bids placed
+                                                    </p>
+                                                )}
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 </motion.div>
