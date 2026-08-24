@@ -352,6 +352,14 @@ exports.googleLogin = async (req, res) => {
                 user.uid = uid;
                 modified = true;
             }
+            if (!user.firstName) {
+                user.firstName = firstName || "Google";
+                modified = true;
+            }
+            if (!user.lastName) {
+                user.lastName = lastName || "User";
+                modified = true;
+            }
             if (imageUrl && (!user.image || !user.image.url)) {
                 user.image = { url: imageUrl, public_id: null };
                 modified = true;
