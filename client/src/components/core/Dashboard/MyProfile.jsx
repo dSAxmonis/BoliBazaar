@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
-import { deleteUserAccount, getUserProfile } from '../../../services/operations/userAPI';
+import { deleteUserAccount, getUserProfile, updateUserProfile } from '../../../services/operations/userAPI';
 import { formatDate } from "../../../services/formatDate";
 import { FaUser, FaTrophy, FaGavel, FaEye, FaClock, FaDollarSign } from "react-icons/fa";
 import { RiAuctionLine } from "react-icons/ri";
 import { BiTime } from "react-icons/bi";
-import { MdDelete } from "react-icons/md";
+import { MdDelete, MdEdit } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 
@@ -16,6 +16,13 @@ const MyProfile = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("overview");
     const [showConfirm, setShowConfirm] = useState(false);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [editFirstName, setEditFirstName] = useState("");
+    const [editLastName, setEditLastName] = useState("");
+    const [editImageFile, setEditImageFile] = useState(null);
+    const [editPreview, setEditPreview] = useState(null);
+    const [savingProfile, setSavingProfile] = useState(false);
+    const fileInputRef = useRef(null);
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
@@ -79,6 +86,35 @@ const MyProfile = () => {
         dispatch(deleteUserAccount(navigate));
     }
 
+    const openEditModal = () => {
+        setEditFirstName(user.firstName || "");
+        setEditLastName(user.lastName || "");
+        setEditImageFile(null);
+        setEditPreview(null);
+        setIsEditOpen(true);
+    };
+
+    const handleImagePick = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setEditImageFile(file);
+        setEditPreview(URL.createObjectURL(file));
+    };
+
+    const handleSaveProfile = async () => {
+        setSavingProfile(true);
+        const updated = await dispatch(updateUserProfile({
+            firstName: editFirstName,
+            lastName: editLastName,
+            image: editImageFile,
+        }));
+        setSavingProfile(false);
+        if (updated) {
+            setProfileData((prev) => ({ ...prev, user: { ...prev.user, ...updated } }));
+            setIsEditOpen(false);
+        }
+    };
+
     return (
         <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -117,6 +153,13 @@ const MyProfile = () => {
                                         className="w-32 h-32 rounded-full object-cover shadow-lg border-4 border-white"
                                     />
                                     <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white"></div>
+                                    <button
+                                        onClick={openEditModal}
+                                        className="absolute -top-1 -right-1 w-9 h-9 bg-white shadow-md rounded-full flex items-center justify-center text-gray-600 hover:text-blue-600 hover:shadow-lg transition"
+                                        title="Edit profile"
+                                    >
+                                        <MdEdit className="w-4 h-4" />
+                                    </button>
                                 </div>
 
                                 <div className="flex-1 text-center md:text-left">
@@ -372,6 +415,92 @@ const MyProfile = () => {
                     )}
                 </AnimatePresence>
         </div>
+
+        <AnimatePresence>
+            {isEditOpen && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+                    onClick={() => !savingProfile && setIsEditOpen(false)}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Edit Profile</h3>
+
+                        <div className="flex flex-col items-center mb-6">
+                            <div className="relative">
+                                <img
+                                    src={editPreview || user.image?.url || `https://api.dicebear.com/8.x/initials/svg?seed=${editFirstName} ${editLastName}`}
+                                    alt="Preview"
+                                    className="w-24 h-24 rounded-full object-cover border-4 border-gray-100"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="absolute -bottom-1 -right-1 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition"
+                                    title="Change photo"
+                                >
+                                    <MdEdit className="w-4 h-4" />
+                                </button>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleImagePick}
+                                />
+                            </div>
+                            <p className="text-xs text-gray-400 mt-2">Click the pencil to change your photo</p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm text-gray-600 mb-1 block">First Name</label>
+                                <input
+                                    type="text"
+                                    value={editFirstName}
+                                    onChange={(e) => setEditFirstName(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm text-gray-600 mb-1 block">Last Name</label>
+                                <input
+                                    type="text"
+                                    value={editLastName}
+                                    onChange={(e) => setEditLastName(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <Button
+                                onClick={() => setIsEditOpen(false)}
+                                disabled={savingProfile}
+                                className="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSaveProfile}
+                                disabled={savingProfile || !editFirstName.trim()}
+                                className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                                {savingProfile ? "Saving..." : "Save Changes"}
+                            </Button>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
         </motion.div>
     );
 };

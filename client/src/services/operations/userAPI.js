@@ -3,7 +3,7 @@ import { userEndpoints } from '../apis';
 import { apiConnector } from '../apiConnector';
 import { setLoading, setUser } from '../../slices/profileSlice';
 
-const { TOP_BUYERS, TOP_SELLERS, GET_USER_PROFILE, GET_USER_HISTORY, GET_USER_WINNINGS, DELETE_USER_ACCOUNT } = userEndpoints;
+const { TOP_BUYERS, TOP_SELLERS, GET_USER_PROFILE, GET_USER_HISTORY, GET_USER_WINNINGS, DELETE_USER_ACCOUNT, UPDATE_PROFILE } = userEndpoints;
 
 export const topBuyers = async () => {
     //const toastId = toast.loading("Loading...");
@@ -135,5 +135,46 @@ export function deleteUserAccount(navigate){
         }
         dispatch(setLoading(false));
         toast.dismiss(toastId);
+    }
+}
+
+// Update firstName / lastName / profile picture.
+// `updates` is a plain object: { firstName?, lastName?, image? (File) }
+export function updateUserProfile(updates){
+    return async(dispatch, getState) => {
+        const toastId = toast.loading("Saving changes...");
+        dispatch(setLoading(true));
+
+        try{
+            const formData = new FormData();
+            if (updates.firstName) formData.append("firstName", updates.firstName);
+            if (updates.lastName) formData.append("lastName", updates.lastName);
+            if (updates.image instanceof File) formData.append("image", updates.image);
+
+            const response = await apiConnector("PATCH", UPDATE_PROFILE, formData);
+
+            if(!response.data.success){
+                throw new Error(response.data.message);
+            }
+
+            const updatedUser = response.data.user;
+            const currentUser = getState().profile.user || {};
+            const mergedUser = { ...currentUser, ...updatedUser };
+
+            dispatch(setUser(mergedUser));
+            localStorage.setItem("user", JSON.stringify(mergedUser));
+
+            toast.success("Profile updated");
+            toast.dismiss(toastId);
+            dispatch(setLoading(false));
+            return mergedUser;
+        }
+        catch(error){
+            console.log("Error updating profile", error);
+            toast.error(error?.response?.data?.message || "Could not update profile");
+            toast.dismiss(toastId);
+            dispatch(setLoading(false));
+            return null;
+        }
     }
 }

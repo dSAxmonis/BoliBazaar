@@ -310,7 +310,7 @@ exports.fetchSpecificAuction = async (req, res) => {
             })
         }
 
-        const auctionDetails = await Product.findById({_id:auctionId})
+        const auctionDetails = await Product.findById(auctionId)
             .populate("seller", "firstName lastName image")
             .populate("category", "name description")
             .populate({

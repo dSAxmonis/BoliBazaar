@@ -32,7 +32,7 @@ const LoginPage = () => {
   }
 
   const handleGoogleLogin = () => {
-    dispatch(googleLogin(navigate));
+    dispatch(googleLogin(navigate, "login"));
   }
 
   useEffect(() => {

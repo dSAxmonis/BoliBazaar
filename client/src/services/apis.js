@@ -4,7 +4,9 @@ export const authEndpoints = {
     LOGIN_API: BASE_URL + "/auth/login",
     SIGNUP_API: BASE_URL + "/auth/signup",
     LOGOUT_API: BASE_URL + "/auth/logout",
-    GOOGLE_LOGIN: BASE_URL + "/auth/google-login"
+    GOOGLE_LOGIN: BASE_URL + "/auth/google-login",
+    VERIFY_OTP_API: BASE_URL + "/auth/verify-otp",
+    VERIFY_USER_API: BASE_URL + "/auth/verify"
 };
 
 export const auctionEndpoints = {
@@ -29,7 +31,8 @@ export const userEndpoints = {
     GET_USER_PROFILE: BASE_URL + "/user/profile",
     GET_USER_HISTORY: BASE_URL + "/user/history",
     GET_USER_WINNINGS: BASE_URL + "/user/winnings",
-    DELETE_USER_ACCOUNT: BASE_URL + "/user/delete-account"
+    DELETE_USER_ACCOUNT: BASE_URL + "/user/delete-account",
+    UPDATE_PROFILE: BASE_URL + "/user/update-profile"
 }
 
 export const bidEndpoints = {

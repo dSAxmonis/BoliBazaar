@@ -1,6 +1,64 @@
 const User = require("../models/User");
 const Product = require("../models/Product");
 const Bid = require("../models/Bid");
+const { uploadToCloudinary } = require("../utils/cloudinaryUpload");
+
+// Update user's name and/or profile picture
+exports.updateProfile = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { firstName, lastName } = req.body;
+
+        const updateData = {};
+        if (firstName) updateData.firstName = firstName;
+        if (lastName) updateData.lastName = lastName;
+
+        if (req.file) {
+            try {
+                const imageData = await uploadToCloudinary(req.file);
+                updateData.image = imageData;
+            } catch (error) {
+                return res.status(500).json({
+                    success: false,
+                    message: "Failed to upload image to Cloudinary"
+                });
+            }
+        }
+
+        const user = await User.findByIdAndUpdate(userId, updateData, {
+            new: true,
+            runValidators: true,
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            user: {
+                _id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                image: user.image,
+                role: user.role,
+                createdAt: user.createdAt,
+            },
+        });
+    } catch (error) {
+        console.error("Error updating profile:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message,
+        });
+    }
+};
 
 exports.topSellers = async (req, res) => {
     try {
@@ -93,10 +151,10 @@ exports.getUserProfile = async (req, res) => {
 
         // Get user statistics (guarded - some accounts may be missing these
         // fields if they were created before the schema included them)
-        const products = user.products || [];
-        const winnings = user.winnings || [];
-        const bids = user.bids || [];
-        const watchList = user.watchList || [];
+        const products = (user.products || []).filter(Boolean);
+        const winnings = (user.winnings || []).filter(Boolean);
+        const bids = (user.bids || []).filter(Boolean);
+        const watchList = (user.watchList || []).filter(Boolean);
 
         const totalAuctions = products.length;
         const totalWinnings = winnings.length;
@@ -115,7 +173,7 @@ exports.getUserProfile = async (req, res) => {
 
         // Calculate total value of winnings
         const totalWinningsValue = winnings.reduce((sum, product) => 
-            sum + (product ? (product.finalPrice || product.startingPrice || 0) : 0), 0
+            sum + (product ? (product.currentBid || product.startingPrice || 0) : 0), 0
         );
 
         // Get recent activity (last 10 activities)
@@ -191,7 +249,7 @@ exports.getUserHistory = async (req, res) => {
                 id: item._id,
                 type: "won",
                 title: item.title,
-                amount: item.finalPrice || item.startingPrice,
+                amount: item.currentBid || item.startingPrice,
                 date: item.updatedAt,
                 status: "completed",
                 image: item.images?.url || null
@@ -255,8 +313,9 @@ exports.getUserWinnings = async (req, res) => {
             id: item._id,
             title: item.title,
             description: item.description,
-            finalPrice: item.finalPrice || item.startingPrice,
+            finalPrice: item.currentBid || item.startingPrice,
             originalPrice: item.startingPrice,
+            buyNowPrice: item.buyNowPrice || null,
             wonDate: item.updatedAt,
             seller: item.seller,
             image: item.images?.url || null,
@@ -264,7 +323,10 @@ exports.getUserWinnings = async (req, res) => {
         }));
 
         const totalValue = winnings.reduce((sum, item) => sum + item.finalPrice, 0);
-        const totalSavings = winnings.reduce((sum, item) => sum + (item.originalPrice - item.finalPrice), 0);
+        const totalSavings = winnings.reduce((sum, item) => {
+            const savings = item.buyNowPrice ? (item.buyNowPrice - item.finalPrice) : 0;
+            return sum + (savings > 0 ? savings : 0);
+        }, 0);
 
         return res.status(200).json({
             success: true,

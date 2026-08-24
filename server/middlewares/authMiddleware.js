@@ -2,10 +2,11 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 exports.authMiddleware = async (req, res, next) => {
-    const token = req.cookies.token;
+    const token = req.cookies.token || req.header("Authorization")?.replace("Bearer ", "") || req.body.token;
 
     if(!token){
         return res.status(401).json({
+            success: false,
             message:"Not Authenticated"
         });
     }

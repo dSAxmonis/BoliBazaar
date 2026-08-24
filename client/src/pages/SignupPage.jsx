@@ -99,7 +99,7 @@ const SignupPage = () => {
   }
 
   const handleGoogleLogin = () => {
-      dispatch(googleLogin(navigate));
+      dispatch(googleLogin(navigate, "signup"));
   }
 
   useEffect(() => {

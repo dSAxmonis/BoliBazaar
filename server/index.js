@@ -9,13 +9,14 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const connectDB = require('./config/database');
+const { connectRedis } = require('./config/redis');
 
 const authRoutes = require('./routes/Auth');
 const auctionRoutes = require('./routes/Auction');
 const userRoutes = require('./routes/User');
 const bidRoutes = require('./routes/Bid');
 
-const setupSocket = require('./socket/socket');
+const { setupSocket } = require('./socket/socket');
 
 const app = express();
 const server = http.createServer(app);
@@ -33,8 +34,9 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// Connect to MongoDB
+// Connect to MongoDB & Redis
 connectDB();
+connectRedis();
 
 // Pass io instance to all routes
 app.use((req, res, next) => {

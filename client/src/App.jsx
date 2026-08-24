@@ -20,6 +20,8 @@ import { initializeSocket } from './services/socketService';
 import Winnings from './components/core/Dashboard/Winnings';
 import History from './components/core/Dashboard/History';
 import EditAuction from './components/core/Dashboard/EditAuction';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import VerifyOtpPage from './pages/VerifyOtpPage';
 
 const App = () => {
     const { user } = useSelector((state) => state.profile);
@@ -44,6 +46,16 @@ const App = () => {
                     <OpenRoute>
                         <LoginPage />
                     </OpenRoute>
+                }/>
+
+                <Route path='/verify-otp' element={
+                    <OpenRoute>
+                        <VerifyOtpPage />
+                    </OpenRoute>
+                }/>
+
+                <Route path='/token/:token' element={
+                    <VerifyEmailPage />
                 }/>
 
                 <Route path='/signup' element={

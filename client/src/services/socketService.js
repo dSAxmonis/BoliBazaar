@@ -9,8 +9,22 @@ const socketUrl = import.meta.env.VITE_SOCKET_URL;
 export const initializeSocket = () => {
     if (!socket) {
         //console.log('Initializing socket connection...');
+        const userStr = localStorage.getItem("user");
+        let token = null;
+        if (userStr) {
+            try {
+                const userObj = JSON.parse(userStr);
+                token = userObj?.token;
+            } catch (e) {
+                console.error("Error parsing user from localStorage for socket initialization", e);
+            }
+        }
+
         socket = io(socketUrl, {
             withCredentials: true,
+            auth: {
+                token: token
+            },
             reconnection: true,
             reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
             reconnectionDelay: 1000,

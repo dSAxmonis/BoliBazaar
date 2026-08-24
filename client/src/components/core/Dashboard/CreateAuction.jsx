@@ -52,13 +52,17 @@ const CreateAuction = () => {
 
     const handleDateChange = (e) => {
         const date = e.target.value;
-        const now = new Date(); 
         
-        if (!date) return;
+        if (!date) {
+            setSelectedDate("");
+            setValue("auctionDate", "", { shouldValidate: true });
+            return;
+        }
 
-        const formattedDateTime = new Date(`${date}T${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}Z`).toISOString();
+        const formattedDateTime = new Date(`${date}T23:59:59.999Z`).toISOString();
 
-        setValue("auctionDate", formattedDateTime);
+        setSelectedDate(date);
+        setValue("auctionDate", formattedDateTime, { shouldValidate: true });
     };
 
     const onSubmit = async (data) => {
@@ -87,6 +91,10 @@ const CreateAuction = () => {
     }
 
     useEffect(() => {
+        register("auctionDate", { required: "Auction end date is required" });
+    }, [register]);
+
+    useEffect(() => {
         if(isSubmitSuccessful){
             reset({
                 title:"",
@@ -97,8 +105,9 @@ const CreateAuction = () => {
             })
 
             setPreview(null);
+            setSelectedDate("");
         }
-    })
+    }, [isSubmitSuccessful, reset]);
 
     useEffect(() => {
         const getCategories = async () => {
@@ -345,6 +354,15 @@ const CreateAuction = () => {
                                         className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
                                         onChange={handleDateChange}
                                     />
+                                    {errors.auctionDate && (
+                                        <motion.p
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="text-red-500 text-sm"
+                                        >
+                                            {errors.auctionDate.message}
+                                        </motion.p>
+                                    )}
                                     {selectedDate && (
                                         <motion.p
                                             initial={{ opacity: 0, y: -10 }}

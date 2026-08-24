@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { fetchAuctionDetails } from '../services/operations/auctionAPI';
 import { placeBid, editBid, deleteBid } from '../services/operations/bidAPI';
 import CountdownTimer from '../components/CountdownTimer';
+import EmptyLoader from '../components/EmptyLoader';
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import BidModal from '../components/common/BidModal';
 import { useForm } from 'react-hook-form';
@@ -65,15 +66,22 @@ const AuctionDetails = () => {
 
         const incomingBid = payload.bid || payload;
 
+        const bidderData = incomingBid.bidder || incomingBid.user || {
+          _id: incomingBid.userId || incomingBid.bidderId || `u_${incomingBid.bidderEmail || 'anon'}`,
+          firstName: incomingBid.firstName || incomingBid.user?.firstName || (incomingBid.bidderEmail ? incomingBid.bidderEmail.split('@')[0] : 'Anonymous'),
+          lastName: incomingBid.lastName || incomingBid.user?.lastName || '',
+          image: incomingBid.image || incomingBid.user?.image || ''
+        };
+
+        // If image is a string instead of {url, public_id}, standardise it
+        if (typeof bidderData.image === 'string') {
+          bidderData.image = { url: bidderData.image, public_id: null };
+        }
+
         const normalizedBid = {
           _id: incomingBid._id || `bid_${Date.now()}`,
-          bidAmount: incomingBid.bidAmount ?? incomingBid.amount ?? 0,
-          user: incomingBid.user || {
-            _id: incomingBid.userId || incomingBid.bidderId || `u_${incomingBid.bidderEmail || 'anon'}`,
-            firstName: incomingBid.user?.firstName || (incomingBid.bidderEmail ? incomingBid.bidderEmail.split('@')[0] : 'Anonymous'),
-            lastName: incomingBid.user?.lastName || '',
-            image: incomingBid.user?.image || ''
-          },
+          amount: incomingBid.amount ?? incomingBid.bidAmount ?? 0,
+          bidder: bidderData,
           createdAt: incomingBid.createdAt || new Date().toISOString()
         };
 
@@ -82,9 +90,8 @@ const AuctionDetails = () => {
 
           const exists = prev.bids?.some(b => b._id === normalizedBid._id);
           if (exists) {
-
-            if (normalizedBid.bidAmount > (prev.currentBid ?? 0)) {
-              return { ...prev, currentBid: normalizedBid.bidAmount };
+            if (normalizedBid.amount > (prev.currentBid ?? 0)) {
+              return { ...prev, currentBid: normalizedBid.amount };
             }
             return prev;
           }
@@ -93,7 +100,7 @@ const AuctionDetails = () => {
           const updated = {
             ...prev,
             bids: newBids,
-            currentBid: Math.max(prev.currentBid ?? 0, normalizedBid.bidAmount)
+            currentBid: Math.max(prev.currentBid ?? 0, normalizedBid.amount)
           };
           return updated;
         });
@@ -208,7 +215,7 @@ const AuctionDetails = () => {
     return diffInHours <= 24 && diffInHours > 0;
   };
 
-  const bidsSortedDesc = (auctionData?.bids || []).slice().sort((a, b) => (b.bidAmount || 0) - (a.bidAmount || 0));
+  const bidsSortedDesc = (auctionData?.bids || []).slice().sort((a, b) => (b.amount || 0) - (a.amount || 0));
   
   return (
     <div className='w-full xl:w-[95%] mx-auto mt-10 flex flex-col xl:flex-row gap-8 pt-24'>
@@ -461,7 +468,11 @@ const AuctionDetails = () => {
 
       <BidModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className='flex flex-col gap-2'>
-          <h1 className='text-sm text-black font-medium'>Highest Bid: ${auctionData?.currentBid ?? 0}</h1>
+          <h1 className='text-sm text-black font-medium'>
+            {auctionData?.bids && auctionData.bids.length > 0
+              ? `Highest Bid: $${auctionData.currentBid}`
+              : `Starting Price: $${auctionData?.startingPrice ?? 0}`}
+          </h1>
           <h2 className='text-blue-600 mt-3 text-3xl font-bold'>Bid Amount</h2>
 
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mt-3">
@@ -469,12 +480,31 @@ const AuctionDetails = () => {
               <input
                 type="number"
                 id='bidAmount'
-                min={(auctionData?.currentBid ?? 0) + 1}
-                {...register("bidAmount", { required: true, min: 1 })}
+                min={
+                  auctionData?.bids && auctionData.bids.length > 0
+                    ? (auctionData.currentBid || 0) + 1
+                    : (auctionData?.startingPrice || 0)
+                }
+                {...register("bidAmount", {
+                  required: true,
+                  min: auctionData?.bids && auctionData.bids.length > 0
+                    ? (auctionData.currentBid || 0) + 1
+                    : (auctionData?.startingPrice || 0)
+                })}
                 placeholder="Enter bid amount"
                 className="w-full rounded-md p-2 h-12 focus:outline-none bg-white text-black border border-slate-300"
               />
-              {errors.bidAmount && <span className="text-red-500 text-sm">Valid bid amount is required</span>}
+              {errors.bidAmount && (
+                <span className="text-red-500 text-sm">
+                  {errors.bidAmount.type === "min"
+                    ? `Bid must be at least $${
+                        auctionData?.bids && auctionData.bids.length > 0
+                          ? (auctionData.currentBid || 0) + 1
+                          : (auctionData?.startingPrice || 0)
+                      }`
+                    : "Valid bid amount is required"}
+                </span>
+              )}
             </div>
 
             <div className="flex justify-end gap-4">

@@ -1,19 +1,39 @@
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
-const Notification = require('../models/Notifications');
+
+let ioInstance = null;
+const connectedUsers = {};
 
 const setupSocket = (server) => {
     const io = new Server(server, {
         cors: {
-            origin: process.env.FRONTEND_URL,
+            origin: [
+                process.env.FRONTEND_URL || 'http://localhost:3000',
+                'https://bolibazaar.vercel.app',
+                'https://bolibazaar-git-main.vercel.app'
+            ],
             credentials: true,
         },
     });
 
-    const connectedUsers = {};
+    ioInstance = io;
 
     io.use((socket, next) => {
-        const token = socket.handshake.headers.cookie?.split("token=")[1];
+        let token = socket.handshake.auth?.token || socket.handshake.query?.token;
+        if (!token) {
+            const cookieHeader = socket.handshake.headers.cookie;
+            if (cookieHeader) {
+                const cookies = cookieHeader.split(';');
+                for (let cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'token') {
+                        token = value;
+                        break;
+                    }
+                }
+            }
+        }
+
         if (!token) {
             return next(new Error("Authentication error"));
         }
@@ -23,45 +43,27 @@ const setupSocket = (server) => {
             socket.user = decoded;
             next();
         } catch (error) {
-            //console.log("ERROR IN SOCKET AUTHENTICATION: ", error);
             return next(new Error("Authentication error"));
         }
     });
 
     io.on("connection", (socket) => {
-        const userId = socket.user.id; // or email
-        //console.log("User connected:", socket.user.email);
+        const userId = socket.user.id;
         connectedUsers[userId] = socket.id;
 
         socket.on("disconnect", () => {
-            //console.log(`User ${socket.user.email} disconnected`);
             delete connectedUsers[userId];
-        });
-
-        socket.on("newBid", async ({ productId, bidAmount, bidderEmail, productCreatorId }) => {
-            const message = `New bid of ₹${bidAmount} placed by ${bidderEmail}`;
-            const creatorSocketId = connectedUsers[productCreatorId];
-
-            await Notification.create({
-                userId: productCreatorId,
-                message
-            });
-
-            if (creatorSocketId) {
-                io.to(creatorSocketId).emit("bidNotification", {
-                    bidAmount,
-                    bidderEmail,
-                    timestamp: new Date(),
-                    message: `New bid of ₹${bidAmount} placed by ${bidderEmail}`
-                });
-                //console.log(`Notification sent to product creator ${productCreatorId}`);
-            } else {
-                //console.log(`Creator ${productCreatorId} not connected`);
-            }
         });
     });
 
     return io;
 };
 
-module.exports = setupSocket;
+const getIo = () => ioInstance;
+const getConnectedUsers = () => connectedUsers;
+
+module.exports = {
+    setupSocket,
+    getIo,
+    getConnectedUsers
+};
