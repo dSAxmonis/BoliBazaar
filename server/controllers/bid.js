@@ -52,10 +52,27 @@ exports.placeBid = async (req, res) => {
       amount: bidAmount
     });
 
-    // Update product's bids and currentBid
-    product.bids.push(newBid._id);
-    product.currentBid = bidAmount;
-    await product.save();
+    // Update product's bids and currentBid atomically to prevent concurrency conflicts
+    const updatedProduct = await Product.findOneAndUpdate(
+      { 
+        _id: productId,
+        currentBid: product.currentBid 
+      },
+      {
+        $push: { bids: newBid._id },
+        $set: { currentBid: bidAmount }
+      },
+      { new: true }
+    );
+
+    if (!updatedProduct) {
+      // Rollback the created bid to maintain data integrity
+      await Bid.findByIdAndDelete(newBid._id);
+      return res.status(409).json({
+        success: false,
+        message: "Another user placed a bid just now. Please try again."
+      });
+    }
 
     // Update user's bids array
     await User.findByIdAndUpdate(bidderId, { $push: { bids: newBid._id } });
