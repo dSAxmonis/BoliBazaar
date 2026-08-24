@@ -21,7 +21,7 @@ export function login(data, navigate){
             }
 
             // OTP sent successfully
-            toast.success("OTP sent to your email!");
+            toast.success(response.data.message || "OTP sent to your email!", { duration: 6000 });
             navigate("/verify-otp", { state: { email: data.email } });
         }
         catch(error){
@@ -45,8 +45,8 @@ export function signup(formData, navigate){
                 throw new Error(response.data.message);
             }
 
-            toast.success("Registration successful! Check email for verification link.", {
-                duration: 5000
+            toast.success(response.data.message || "Registration successful! Check email for verification link.", {
+                duration: 6000
             });
             navigate("/login");
         }
