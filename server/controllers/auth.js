@@ -210,10 +210,39 @@ exports.login = async (req, res) => {
         }
 
         if (!user.password) {
-            return res.status(400).json({
-                success: false,
-                message: "This account is registered via Google. Please sign in with Google."
-            });
+            // Generate OTP for creating password
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            const otpKey = `create-password-otp:${email}`;
+
+            // Store OTP in Redis for 5 minutes
+            await cacheSet(otpKey, JSON.stringify(otp), { EX: 300 });
+
+            const subject = "OTP for Creating Account Password - BoliBazaar";
+            const otpHtml = `
+                <h1>Create Password for your BoliBazaar Account</h1>
+                <p>You registered this account using Google. To log in manually with email/password, you must set a password.</p>
+                <p>Your verification OTP is: <strong>${otp}</strong></p>
+                <p>This OTP is valid for 5 minutes.</p>
+            `;
+
+            try {
+                await sendEmail(email, subject, otpHtml);
+                return res.status(200).json({
+                    success: true,
+                    isGoogleAccountWithoutPassword: true,
+                    email,
+                    message: "A password creation OTP has been sent to your email."
+                });
+            } catch (mailError) {
+                console.error("[login] Create password OTP email delivery failed, providing fallback:", mailError);
+                return res.status(200).json({
+                    success: true,
+                    isGoogleAccountWithoutPassword: true,
+                    email,
+                    message: `A password creation OTP has been sent (Mock OTP fallback: ${otp})`,
+                    otp
+                });
+            }
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
@@ -310,10 +339,11 @@ exports.verifyOtp = async (req, res) => {
         });
 
         // Send cookie
+        const isProduction = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "deployement";
         res.cookie("token", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
             maxAge: 24 * 60 * 60 * 1000,
         });
 
@@ -340,109 +370,171 @@ exports.verifyOtp = async (req, res) => {
     }
 };
 
-exports.googleLogin = async (req, res) => {
+
+
+exports.logout = async (req, res) => {
+    const isProduction = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "deployement";
+    res.clearCookie("token", { 
+        httpOnly: true, 
+        sameSite: isProduction ? "none" : "lax", 
+        secure: isProduction
+    });
+    res.json({ 
+        message: "Logged out" 
+    });
+};
+
+exports.getMe = async (req, res) => {
     try {
-        let { uid, firstName, lastName, email, imageUrl, action } = req.body;
-
-        // Fallback defaults to prevent Mongoose schema validation failures
-        if (!firstName) firstName = "Google";
-        if (!lastName) lastName = "User";
-
-        let user = await User.findOne({ $or: [{ uid }, { email }] });
+        const userId = req.user.id;
+        const user = await User.findById(userId);
 
         if (!user) {
-            if (action === "login") {
-                return res.status(400).json({
-                    success: false,
-                    message: "User not registered. Please sign up first."
-                });
-            }
-
-            user = new User({
-                uid,
-                firstName,
-                lastName,
-                email,
-                image: {
-                    url: imageUrl || null,
-                    public_id: null
-                }
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
             });
-
-            await user.save();
-        } else {
-            let modified = false;
-            if (!user.uid) {
-                user.uid = uid;
-                modified = true;
-            }
-            if (!user.firstName) {
-                user.firstName = firstName || "Google";
-                modified = true;
-            }
-            if (!user.lastName) {
-                user.lastName = lastName || "User";
-                modified = true;
-            }
-            if (imageUrl && (!user.image || !user.image.url)) {
-                user.image = { url: imageUrl, public_id: null };
-                modified = true;
-            }
-            if (modified) {
-                await user.save();
-            }
         }
 
+        return res.status(200).json({
+            success: true,
+            user: {
+                _id: user._id,
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                image: user.image,
+                role: user.role || "User"
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching user session:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
+    }
+};
+
+exports.googleCallback = (req, res) => {
+    try {
+        const CLIENT_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+        
         const payload = {
-            email: user.email,
-            id: user._id,
-            role: user.role || "User"
+            email: req.user.email,
+            id: req.user._id,
+            role: req.user.role || "User"
         };
 
         const token = jwt.sign(payload, process.env.JWT_SECRET, {
             expiresIn: "24h",
         });
 
-        user.token = token;
-        user.password = undefined;
-
+        const isProduction = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "deployement";
         const options = {
-            expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+            expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax"
         };
 
-        return res.cookie("token", token, options).status(200).json({
-            success: true,
-            message: "Login from Google successful",
-            token,
-            user: {
-                id: user._id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                image: user.image,
-                role: user.role || "User",
-                token: token
-            }
-        });
+        res.cookie('token', token, options);
+
+        const user = {
+            id: req.user._id,
+            firstName: req.user.firstName,
+            lastName: req.user.lastName,
+            email: req.user.email,
+            image: req.user.image,
+            role: req.user.role || "User",
+            token: token
+        };
+
+        res.send(`
+            <script>
+                if (window.opener) {
+                    window.opener.postMessage({ 
+                        type: 'GOOGLE_AUTH_SUCCESS', 
+                        token: '${token}', 
+                        user: ${JSON.stringify(user)} 
+                    }, '${CLIENT_URL}');
+                    window.close();
+                } else {
+                    window.location.href = '${CLIENT_URL}/dashboard/my-profile';
+                }
+            </script>
+        `);
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            success: false,
-            message: "Error logging from Google: " + error.message
-        });
+        console.error("Error in googleCallback:", error);
+        const CLIENT_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${CLIENT_URL}/login?error=auth_error`);
     }
 };
 
-exports.logout = async (req, res) => {
-    res.clearCookie("token", { 
-        httpOnly: true, 
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", 
-        secure: process.env.NODE_ENV === "production"
-    });
-    res.json({ 
-        message: "Logged out" 
-    });
+exports.createPassword = async (req, res) => {
+    try {
+        const { email, otp, password, confirmPassword } = req.body;
+
+        if (!email || !otp || !password || !confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required"
+            });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Passwords do not match"
+            });
+        }
+
+        // Validate OTP from Redis
+        const otpKey = `create-password-otp:${email}`;
+        const storedOtpJson = await cacheGet(otpKey);
+        
+        if (!storedOtpJson) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP has expired or is invalid"
+            });
+        }
+
+        const storedOtp = JSON.parse(storedOtpJson);
+        if (storedOtp !== otp) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid OTP"
+            });
+        }
+
+        // Find user
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(password, 10);
+        user.password = hashedPassword;
+        await user.save();
+
+        // Delete OTP from Redis
+        await cacheDel(otpKey);
+
+        return res.status(200).json({
+            success: true,
+            message: "Password created successfully. You can now log in manually."
+        });
+    } catch (error) {
+        console.error("Error in createPassword:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error: " + error.message
+        });
+    }
 };

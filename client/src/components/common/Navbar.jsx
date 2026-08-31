@@ -31,7 +31,6 @@ const Navbar = () => {
         disconnectSocket();
         
         dispatch(setUser(null));
-        localStorage.removeItem('user');
         toast.success("Logged Out");
         navigate('/');
     };

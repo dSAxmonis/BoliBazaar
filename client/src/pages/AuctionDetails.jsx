@@ -341,8 +341,13 @@ const AuctionDetails = () => {
 
             {(() => {
               if (!auctionData?.bids?.length || !user) return null;
+              if (user?.id === auctionData?.seller?._id || user?._id === auctionData?.seller?._id) return null;
+              
+              const userId = user?.id || user?._id;
+              const hasUserBid = auctionData.bids.some(bid => bid?.bidder?._id === userId);
               const highestBid = bidsSortedDesc[0];
-              if (highestBid?.bidder?._id !== user?.id) {
+              
+              if (hasUserBid && highestBid?.bidder?._id !== userId) {
                 return (
                   <motion.div
                     className="text-red-500 font-semibold mt-4 flex gap-3 items-center"

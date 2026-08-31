@@ -1,25 +1,21 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-    user: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : null,
+    user: null,
     loading: false,
-    editAuctionForm: null
+    editAuctionForm: null,
+    sessionChecked: false
 }
 
 const profileSlice = createSlice({
     name:"profile",
     initialState:initialState,
     reducers:{
-        setUser(state, value) {
-            state.user = value.payload;
-            if (value.payload === null) {
-                localStorage.removeItem("user");
-            } else {
-                localStorage.setItem("user", JSON.stringify(value.payload));
-            }
+        setUser(state, action) {
+            state.user = action.payload;
         },
-        setLoading(state, value){
-            state.loading = value.payload;
+        setLoading(state, action){
+            state.loading = action.payload;
         },
         logout: (state) => {
             state.user = null;
@@ -29,9 +25,12 @@ const profileSlice = createSlice({
         },
         clearEditAuctionForm(state) {
             state.editAuctionForm = null;
+        },
+        setSessionChecked(state, action) {
+            state.sessionChecked = action.payload;
         }
     }
 });
 
-export const { setUser, setLoading, logout, setEditAuctionForm, clearEditAuctionForm } = profileSlice.actions;
+export const { setUser, setLoading, logout, setEditAuctionForm, clearEditAuctionForm, setSessionChecked } = profileSlice.actions;
 export default profileSlice.reducer;

@@ -29,7 +29,7 @@ cron.schedule("* * * * *", async () => {
                 highestBid = auction.bids.reduce((max, bid) => (bid.amount > max.amount ? bid : max), auction.bids[0]);
             }
 
-            if (highestBid) {
+            if (highestBid && highestBid.bidder) {
                 // An auction with bids is Sold
                 auction.status = "Sold";
                 auction.winner = highestBid.bidder._id;
@@ -38,7 +38,7 @@ cron.schedule("* * * * *", async () => {
                 await User.findByIdAndUpdate(highestBid.bidder._id, { $push: { winnings: auction._id } });
 
                 const winnerName = `${highestBid.bidder.firstName} ${highestBid.bidder.lastName}`;
-                const sellerName = `${auction.seller.firstName} ${auction.seller.lastName}`;
+                const sellerName = auction.seller ? `${auction.seller.firstName} ${auction.seller.lastName}` : "Unknown Seller";
 
                 // Create DB Notification for Winner
                 const winnerMessage = `Congratulations! You won the auction for "${auction.title}" with a bid of ₹${highestBid.amount}.`;
@@ -48,13 +48,27 @@ cron.schedule("* * * * *", async () => {
                 });
 
                 // Create DB Notification for Seller
-                const sellerMessage = `Your auction for "${auction.title}" has been sold to ${winnerName} for ₹${highestBid.amount}.`;
-                await Notification.create({
-                    userId: auction.seller._id,
-                    message: sellerMessage
-                });
+                if (auction.seller) {
+                    const sellerMessage = `Your auction for "${auction.title}" has been sold to ${winnerName} for ₹${highestBid.amount}.`;
+                    await Notification.create({
+                        userId: auction.seller._id,
+                        message: sellerMessage
+                    });
 
-                // Real-time notifications via socket
+                    // Real-time notifications via socket
+                    if (io) {
+                        const sellerSocketId = connectedUsers[auction.seller._id.toString()];
+                        if (sellerSocketId) {
+                            io.to(sellerSocketId).emit("bidNotification", {
+                                productId: auction._id,
+                                message: sellerMessage,
+                                timestamp: new Date()
+                            });
+                        }
+                    }
+                }
+
+                // Real-time notification for winner
                 if (io) {
                     const winnerSocketId = connectedUsers[highestBid.bidder._id.toString()];
                     if (winnerSocketId) {
@@ -64,36 +78,29 @@ cron.schedule("* * * * *", async () => {
                             timestamp: new Date()
                         });
                     }
-
-                    const sellerSocketId = connectedUsers[auction.seller._id.toString()];
-                    if (sellerSocketId) {
-                        io.to(sellerSocketId).emit("bidNotification", {
-                            productId: auction._id,
-                            message: sellerMessage,
-                            timestamp: new Date()
-                        });
-                    }
                 }
             } else {
-                // No bids - auction is Expired
+                // No bids or bidder deleted - auction is Expired
                 auction.status = "Expired";
 
                 // Create DB Notification for Seller
-                const expiredMessage = `Your auction for "${auction.title}" has expired with no bids.`;
-                await Notification.create({
-                    userId: auction.seller._id,
-                    message: expiredMessage
-                });
+                if (auction.seller) {
+                    const expiredMessage = `Your auction for "${auction.title}" has expired with no bids.`;
+                    await Notification.create({
+                        userId: auction.seller._id,
+                        message: expiredMessage
+                    });
 
-                // Real-time socket notification
-                if (io) {
-                    const sellerSocketId = connectedUsers[auction.seller._id.toString()];
-                    if (sellerSocketId) {
-                        io.to(sellerSocketId).emit("bidNotification", {
-                            productId: auction._id,
-                            message: expiredMessage,
-                            timestamp: new Date()
-                        });
+                    // Real-time socket notification
+                    if (io) {
+                        const sellerSocketId = connectedUsers[auction.seller._id.toString()];
+                        if (sellerSocketId) {
+                            io.to(sellerSocketId).emit("bidNotification", {
+                                productId: auction._id,
+                                message: expiredMessage,
+                                timestamp: new Date()
+                            });
+                        }
                     }
                 }
             }

@@ -1,6 +1,7 @@
 require('dotenv').config();
 require('./utils/auctionScheduler');
 require('./config/cloudinary');
+require('./config/passport');
 const PORT = process.env.PORT || 4000;
 
 const express = require('express');
@@ -25,6 +26,9 @@ const io = setupSocket(server);
 app.use(cors({
     origin: [
         process.env.FRONTEND_URL || 'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
         'https://boli-bazaar-pearl.vercel.app',
         'https://bolibazaar.vercel.app',
         'https://bolibazaar-git-main.vercel.app' // Preview deployments
@@ -32,8 +36,16 @@ app.use(cors({
     credentials: true
 }));
 
+app.use((req, res, next) => {
+    console.log(`[request] ${req.method} ${req.path} - Origin: ${req.headers.origin}`);
+    next();
+});
+
+const passport = require('passport');
+
 app.use(express.json());
 app.use(cookieParser());
+app.use(passport.initialize());
 
 // Connect to MongoDB & Redis
 connectDB();
@@ -60,5 +72,6 @@ app.get('/', (req, res) => {
 });
 
 server.listen(PORT, () => {
+    // Start listening
     console.log(`Server running on port ${PORT}`);
 });

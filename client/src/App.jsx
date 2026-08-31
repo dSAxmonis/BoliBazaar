@@ -22,9 +22,18 @@ import History from './components/core/Dashboard/History';
 import EditAuction from './components/core/Dashboard/EditAuction';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
+import CreatePasswordPage from './pages/CreatePasswordPage';
+import { useDispatch } from 'react-redux';
+import { getUserSession } from './services/operations/authAPI';
 
 const App = () => {
+    const dispatch = useDispatch();
     const { user } = useSelector((state) => state.profile);
+
+    useEffect(() => {
+        // Fetch session on load (to hydrate user state from cookie)
+        dispatch(getUserSession());
+    }, [dispatch]);
 
     useEffect(() => {
         if (user) {
@@ -51,6 +60,12 @@ const App = () => {
                 <Route path='/verify-otp' element={
                     <OpenRoute>
                         <VerifyOtpPage />
+                    </OpenRoute>
+                }/>
+
+                <Route path='/create-password' element={
+                    <OpenRoute>
+                        <CreatePasswordPage />
                     </OpenRoute>
                 }/>
 
